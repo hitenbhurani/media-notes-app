@@ -1,28 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/coordinatorLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#F5F5F5"
+    android:background="@color/background_soft"
     tools:context=".NotesActivity">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/purple_700"
-        app:title="My Media Notes"
-        app:titleTextColor="@color/white"
-        app:navigationIcon="?attr/homeAsUpIndicator" />
+        android:layout_height="wrap_content"
+        android:background="@color/surface_white"
+        app:elevation="0dp">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvNotes"
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="My Notes"
+            app:titleTextColor="@color/text_primary"
+            app:titleTextAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:navigationIconTint="@color/text_primary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="12dp">
+
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/searchView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_search"
+                app:iconifiedByDefault="false"
+                app:queryHint="Search your notes..."
+                app:queryBackground="@android:color/transparent" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupFilter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipAll"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All"
+                        android:checked="true" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipWork"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Work" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipStudy"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Study" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipPersonal"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Personal" />
+
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+        </LinearLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingTop="8dp"
-        android:paddingBottom="16dp" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-</LinearLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvNotes"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="80dp"
+                tools:listitem="@layout/note_item" />
+
+            <include
+                android:id="@+id/emptyState"
+                layout="@layout/empty_state_notes" />
+
+        </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddNote"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="24dp"
+        android:contentDescription="Add new note"
+        app:srcCompat="@android:drawable/ic_input_add"
+        app:backgroundTint="@color/primary_deep"
+        app:tint="@color/white"
+        app:fabSize="normal" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

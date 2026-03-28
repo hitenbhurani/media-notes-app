@@ -46,6 +46,11 @@
             android:label="My Notes"
             android:parentActivityName=".MainActivity" />
 
+        <activity
+            android:name=".NoteDetailActivity"
+            android:label="Note Detail"
+            android:parentActivityName=".NotesActivity" />
+
         <!-- FILE PROVIDER -->
         <provider
             android:name="androidx.core.content.FileProvider"

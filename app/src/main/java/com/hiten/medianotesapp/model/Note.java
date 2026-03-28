@@ -7,6 +7,7 @@ public class Note {
     private String imagePath;
     private String date;
     private String noteType;
+    private int isFavorite;
 
     public Note() {}
 
@@ -17,6 +18,7 @@ public class Note {
         this.imagePath = imagePath;
         this.date = date;
         this.noteType = noteType;
+        this.isFavorite = 0;
     }
 
     public int getId() { return id; }
@@ -36,4 +38,7 @@ public class Note {
 
     public String getNoteType() { return noteType; }
     public void setNoteType(String noteType) { this.noteType = noteType; }
+
+    public int getIsFavorite() { return isFavorite; }
+    public void setIsFavorite(int isFavorite) { this.isFavorite = isFavorite; }
 }

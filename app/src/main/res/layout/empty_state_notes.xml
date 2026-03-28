@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp"
+    android:visibility="gone">
+
+    <ImageView
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:alpha="0.3"
+        android:src="@android:drawable/ic_menu_edit"
+        android:tint="@color/text_secondary" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="No notes yet"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="Start by creating your first note"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+</LinearLayout>

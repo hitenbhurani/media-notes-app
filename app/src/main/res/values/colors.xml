@@ -7,4 +7,23 @@
     <color name="purple_700">#FF3700B3</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
+
+    <color name="primary_deep">#1A237E</color>
+    <color name="accent_teal">#009688</color>
+    <color name="surface_white">#FFFFFF</color>
+    <color name="background_soft">#F8F9FA</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#9E9E9E</color>
+    <color name="error_red">#D32F2F</color>
+
+    <!-- Chip Colors -->
+    <color name="chip_work_bg">#E3F2FD</color>
+    <color name="chip_work_text">#1976D2</color>
+    <color name="chip_study_bg">#E8F5E9</color>
+    <color name="chip_study_text">#388E3C</color>
+    <color name="chip_personal_bg">#FFF3E0</color>
+    <color name="chip_personal_text">#F57C00</color>
+    <color name="chip_default_bg">#F5F5F5</color>
+    <color name="chip_default_text">#616161</color>
 </resources>

@@ -81,6 +81,14 @@
                         android:inputType="textCapWords" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchFavorite"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mark as Favorite"
+                    android:layout_marginBottom="16dp"
+                    android:checked="false" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

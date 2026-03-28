@@ -17,10 +17,10 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -31,6 +31,8 @@ import androidx.core.content.FileProvider;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
+import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.hiten.medianotesapp.database.DBHelper;
 import com.hiten.medianotesapp.model.Note;
 import com.hiten.medianotesapp.worker.NotesWorker;
@@ -53,8 +55,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final int PERMISSION_CODE = 100;
 
     private EditText etTitle, etDescription, etNoteType;
+    private SwitchMaterial switchFavorite;
     private ImageView ivPreview;
     private Button btnCapture, btnSelect, btnSave, btnViewAll;
+    private View rootLayout;
 
     private String currentImagePath = "";
     private boolean isCameraRequest = false;
@@ -65,15 +69,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float lastX, lastY, lastZ;
     private static final float SHAKE_THRESHOLD = 12.0f;
 
+    // Edit Mode Variables
+    private boolean isEditMode = false;
+    private int noteIdToEdit = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         dbHelper = new DBHelper(this);
+        rootLayout = findViewById(android.R.id.content);
         initUI();
         setupWorkManager();
         setupSensor();
+        checkEditMode();
 
         btnCapture.setOnClickListener(v -> {
             isCameraRequest = true;
@@ -83,19 +93,46 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             isCameraRequest = false;
             checkPermissionAndOpenSource();
         });
-        btnSave.setOnClickListener(v -> saveNote());
-        btnViewAll.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, NotesActivity.class)));
+        btnSave.setOnClickListener(v -> saveOrUpdateNote());
+        btnViewAll.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, NotesActivity.class);
+            startActivity(intent);
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        });
     }
 
     private void initUI() {
         etTitle = findViewById(R.id.etTitle);
         etDescription = findViewById(R.id.etDescription);
         etNoteType = findViewById(R.id.etNoteType);
+        switchFavorite = findViewById(R.id.switchFavorite);
         ivPreview = findViewById(R.id.ivPreview);
         btnCapture = findViewById(R.id.btnCapture);
         btnSelect = findViewById(R.id.btnSelect);
         btnSave = findViewById(R.id.btnSave);
         btnViewAll = findViewById(R.id.btnViewAll);
+    }
+
+    private void checkEditMode() {
+        Intent intent = getIntent();
+        if (intent != null && intent.getBooleanExtra("is_edit", false)) {
+            isEditMode = true;
+            noteIdToEdit = intent.getIntExtra("id", -1);
+            etTitle.setText(intent.getStringExtra("title"));
+            etDescription.setText(intent.getStringExtra("description"));
+            etNoteType.setText(intent.getStringExtra("note_type"));
+            currentImagePath = intent.getStringExtra("image_path");
+            
+            // Set favorite switch state
+            int favStatus = intent.getIntExtra("is_favorite", 0);
+            switchFavorite.setChecked(favStatus == 1);
+            
+            if (currentImagePath != null && !currentImagePath.isEmpty()) {
+                displayImage(currentImagePath);
+            }
+            
+            btnSave.setText("Update Note");
+        }
     }
 
     private void setupWorkManager() {
@@ -136,45 +173,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void openCamera() {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-
-        // Diagnostic Log
         List<ResolveInfo> list = getPackageManager().queryIntentActivities(intent, 0);
-        Log.d(TAG, "Camera apps found: " + list.size());
-
+        
         if (intent.resolveActivity(getPackageManager()) != null || !list.isEmpty()) {
             File photoFile;
             try {
                 photoFile = createImageFile();
             } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "File creation failed", Toast.LENGTH_SHORT).show();
+                showSnackbar("File creation failed");
                 return;
             }
 
             if (photoFile != null) {
-                Uri photoURI = FileProvider.getUriForFile(
-                        this,
-                        getPackageName() + ".fileprovider",
-                        photoFile
-                );
-
+                Uri photoURI = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photoFile);
                 intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
-
-                // 🔥 CRITICAL FIX: Grant permissions to the intent
                 intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-                try {
-                    startActivityForResult(intent, REQUEST_CAMERA);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.e(TAG, "StartActivity failed: " + e.getMessage());
-                    Toast.makeText(this, "Camera failed to open", Toast.LENGTH_SHORT).show();
-                }
+                startActivityForResult(intent, REQUEST_CAMERA);
             }
         } else {
-            Log.e(TAG, "No camera app found by resolveActivity");
-            Toast.makeText(this, "No camera app found", Toast.LENGTH_SHORT).show();
+            showSnackbar("No camera app found");
         }
     }
 
@@ -192,7 +210,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         File image = File.createTempFile(imageFileName, ".jpg", storageDir);
         currentImagePath = image.getAbsolutePath();
-        Log.d("IMAGE_PATH", "File path: " + currentImagePath);
         return image;
     }
 
@@ -209,8 +226,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         currentImagePath = saveGalleryImage(selectedImage);
                         displayImage(currentImagePath);
                     } catch (IOException e) {
-                        Log.e(TAG, "Gallery save failed: " + e.getMessage());
-                        Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show();
+                        showSnackbar("Failed to load image");
                     }
                 }
             }
@@ -241,32 +257,52 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return file.getAbsolutePath();
     }
 
-    private void saveNote() {
+    private void saveOrUpdateNote() {
         String title = etTitle.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String noteType = etNoteType.getText().toString().trim();
+        int isFavorite = switchFavorite.isChecked() ? 1 : 0;
         String date = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
 
         if (title.isEmpty()) {
-            Toast.makeText(this, "Title cannot be empty", Toast.LENGTH_SHORT).show();
+            showSnackbar("Title cannot be empty");
             return;
         }
 
-        Note note = new Note(0, title, description, currentImagePath, date, noteType);
-        long id = dbHelper.insertNote(note);
-
-        if (id > 0) {
-            Toast.makeText(this, "Note saved successfully", Toast.LENGTH_SHORT).show();
-            clearForm();
+        if (isEditMode) {
+            dbHelper.updateNote(noteIdToEdit, title, description, currentImagePath, noteType, isFavorite);
+            showSnackbar("Note updated successfully");
+            
+            Intent intent = new Intent(this, NotesActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
+            finish();
         } else {
-            Toast.makeText(this, "Failed to save note", Toast.LENGTH_SHORT).show();
+            Note note = new Note(0, title, description, currentImagePath, date, noteType);
+            note.setIsFavorite(isFavorite);
+            long id = dbHelper.insertNote(note);
+
+            if (id > 0) {
+                showSnackbar("Note saved successfully");
+                clearForm();
+                Intent intent = new Intent(this, NotesActivity.class);
+                startActivity(intent);
+                finish();
+            } else {
+                showSnackbar("Failed to save note");
+            }
         }
+    }
+
+    private void showSnackbar(String message) {
+        Snackbar.make(rootLayout, message, Snackbar.LENGTH_SHORT).show();
     }
 
     private void clearForm() {
         etTitle.setText("");
         etDescription.setText("");
         etNoteType.setText("");
+        switchFavorite.setChecked(false);
         ivPreview.setImageResource(android.R.drawable.ic_menu_gallery);
         currentImagePath = "";
     }
@@ -285,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if ((deltaX > SHAKE_THRESHOLD && deltaY > SHAKE_THRESHOLD) ||
                 (deltaX > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD) ||
                 (deltaY > SHAKE_THRESHOLD && deltaZ > SHAKE_THRESHOLD)) {
-                Toast.makeText(this, "Device motion detected", Toast.LENGTH_SHORT).show();
+                showSnackbar("Device motion detected");
             }
 
             lastX = x; lastY = y; lastZ = z;
@@ -325,7 +361,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (allGranted) {
                 if (isCameraRequest) openCamera(); else openGallery();
             } else {
-                Toast.makeText(this, "Permissions denied", Toast.LENGTH_SHORT).show();
+                showSnackbar("Permissions denied");
             }
         }
     }
