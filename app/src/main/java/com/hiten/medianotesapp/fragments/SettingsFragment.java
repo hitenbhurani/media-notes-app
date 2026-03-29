@@ -2,15 +2,22 @@ package com.hiten.medianotesapp.fragments;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.pdf.PdfDocument;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Environment;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import android.view.LayoutInflater;
@@ -27,13 +34,21 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.hiten.medianotesapp.LoginActivity;
 import com.hiten.medianotesapp.R;
 import com.hiten.medianotesapp.database.NoteRepository;
+import com.hiten.medianotesapp.model.Note;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 public class SettingsFragment extends Fragment {
 
     private static final String TAG = "SettingsFragment";
 
     private TextView tvEmail;
-    private MaterialButton btnLogout, btnClearNotes;
+    private MaterialButton btnLogout, btnClearNotes, btnExportData;
     private SwitchMaterial switchDarkMode;
 
     private FirebaseAuth auth;
@@ -42,7 +57,6 @@ public class SettingsFragment extends Fragment {
 
     private SharedPreferences prefs;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
-    private boolean isApplyingTheme = false;
     private static final String PREFS_NAME = "settings";
     private static final String KEY_DARK_MODE = "dark_mode";
 
@@ -66,6 +80,7 @@ public class SettingsFragment extends Fragment {
         tvEmail = view.findViewById(R.id.tvUserEmail);
         btnLogout = view.findViewById(R.id.btnLogout);
         btnClearNotes = view.findViewById(R.id.btnClearNotes);
+        btnExportData = view.findViewById(R.id.btnExportData);
         switchDarkMode = view.findViewById(R.id.switchDarkMode);
 
         setupUI();
@@ -89,24 +104,21 @@ public class SettingsFragment extends Fragment {
     private void setupActions() {
 
         switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isApplyingTheme) return;
-
-            prefs.edit().putBoolean(KEY_DARK_MODE, isChecked).apply();
-
-            int desiredMode = isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO;
-            if (AppCompatDelegate.getDefaultNightMode() == desiredMode) {
+            boolean current = prefs.getBoolean(KEY_DARK_MODE, false);
+            if (current == isChecked) {
                 return;
             }
 
-            // Prevent rapid taps during recreation-triggering mode change.
-            isApplyingTheme = true;
+            prefs.edit().putBoolean(KEY_DARK_MODE, isChecked).apply();
+
             switchDarkMode.setEnabled(false);
 
-            AppCompatDelegate.setDefaultNightMode(desiredMode);
+            AppCompatDelegate.setDefaultNightMode(
+                    isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
+            );
 
             uiHandler.postDelayed(() -> {
                 if (!isAdded()) return;
-                isApplyingTheme = false;
                 switchDarkMode.setEnabled(true);
             }, 500);
         });
@@ -146,6 +158,8 @@ public class SettingsFragment extends Fragment {
             });
         });
 
+        btnExportData.setOnClickListener(v -> exportNotesReport());
+
         btnLogout.setOnClickListener(v -> {
             btnLogout.setEnabled(false);
 
@@ -161,6 +175,128 @@ public class SettingsFragment extends Fragment {
                 navigateToLogin();
             }
         });
+    }
+
+    private void exportNotesReport() {
+        if (auth.getCurrentUser() == null) {
+            showToastSafely("Please login again");
+            return;
+        }
+
+        String userId = auth.getCurrentUser().getUid();
+        btnExportData.setEnabled(false);
+
+        noteRepository.getAllNotes(userId, new NoteRepository.DataCallback<List<Note>>() {
+            @Override
+            public void onSuccess(List<Note> data) {
+                if (!isAdded()) return;
+                try {
+                    File pdf = createNotesPdf(data);
+                    sharePdf(pdf);
+                    showToastSafely("Report ready");
+                } catch (Exception e) {
+                    showToastSafely("Export failed: " + e.getMessage());
+                } finally {
+                    btnExportData.setEnabled(true);
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {
+                if (!isAdded()) return;
+                btnExportData.setEnabled(true);
+                showToastSafely("Failed to load notes for export");
+            }
+        });
+    }
+
+    private File createNotesPdf(List<Note> notes) throws Exception {
+        PdfDocument document = new PdfDocument();
+        Paint paint = new Paint();
+        paint.setAntiAlias(true);
+
+        final int pageWidth = 595;
+        final int pageHeight = 842;
+        final int margin = 40;
+        final int rowHeight = 20;
+
+        int pageNum = 1;
+        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create();
+        PdfDocument.Page page = document.startPage(pageInfo);
+        Canvas canvas = page.getCanvas();
+        int y = 60;
+
+        paint.setColor(Color.BLACK);
+        paint.setTextSize(18f);
+        paint.setFakeBoldText(true);
+        canvas.drawText("MediaNotes Export Report", margin, y, paint);
+
+        y += 24;
+        paint.setFakeBoldText(false);
+        paint.setTextSize(11f);
+        canvas.drawText("Generated: " + new SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()).format(new Date()), margin, y, paint);
+
+        y += 28;
+        paint.setFakeBoldText(true);
+        canvas.drawText("Title", margin, y, paint);
+        canvas.drawText("Category", 270, y, paint);
+        canvas.drawText("Date", 410, y, paint);
+        paint.setFakeBoldText(false);
+
+        y += 8;
+        canvas.drawLine(margin, y, pageWidth - margin, y, paint);
+        y += 16;
+
+        for (Note note : notes) {
+            if (y > pageHeight - 60) {
+                document.finishPage(page);
+                pageNum++;
+                pageInfo = new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create();
+                page = document.startPage(pageInfo);
+                canvas = page.getCanvas();
+                y = 60;
+            }
+
+            String title = note.getTitle() == null ? "Untitled" : note.getTitle();
+            String category = note.getNoteType() == null ? "General" : note.getNoteType();
+            String date = note.getDateFormatted();
+
+            if (title.length() > 34) {
+                title = title.substring(0, 31) + "...";
+            }
+            if (category.length() > 16) {
+                category = category.substring(0, 13) + "...";
+            }
+
+            paint.setTextSize(10f);
+            canvas.drawText(title, margin, y, paint);
+            canvas.drawText(category, 270, y, paint);
+            canvas.drawText(date, 410, y, paint);
+            y += rowHeight;
+        }
+
+        document.finishPage(page);
+
+        File dir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        if (dir == null) {
+            throw new IllegalStateException("Storage unavailable");
+        }
+        File out = new File(dir, "MediaNotes_Report.pdf");
+        try (FileOutputStream fos = new FileOutputStream(out)) {
+            document.writeTo(fos);
+        } finally {
+            document.close();
+        }
+        return out;
+    }
+
+    private void sharePdf(File file) {
+        Uri uri = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".fileprovider", file);
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("application/pdf");
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, "Share notes report"));
     }
 
     private void navigateToLogin() {

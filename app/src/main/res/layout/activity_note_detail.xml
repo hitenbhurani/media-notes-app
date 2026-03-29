@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_soft"
+    android:background="?attr/colorSurface"
     tools:context=".NoteDetailActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -92,7 +92,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#EEEEEE"
+                android:background="?attr/colorOnSurface"
                 android:layout_marginVertical="20dp" />
 
             <TextView
@@ -100,7 +100,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Note description..."
-                android:textColor="#444444"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:lineSpacingExtra="6dp" />
 

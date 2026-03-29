@@ -1,16 +1,37 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.MediaNotesApp" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary_deep</item>
-        <item name="android:windowBackground">@color/background_soft</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
+<resources>
+    <style name="Theme.MediaNotes.Light" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/black</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
     </style>
 
-    <style name="Theme.MediaNotesApp" parent="Base.Theme.MediaNotesApp" />
+    <style name="Theme.MediaNotes.Dark" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_200</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorSurface">@color/black</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+    </style>
+
+    <style name="Calendar.DateText" parent="@android:style/TextAppearance.Material.Body1">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Calendar.WeekDayText" parent="@android:style/TextAppearance.Material.Body1">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Theme.MediaNotesApp" parent="Theme.MediaNotes.Light" />
 
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenBackground">?attr/colorSurface</item>
         <item name="postSplashScreenTheme">@style/Theme.MediaNotesApp</item>
     </style>
 </resources>

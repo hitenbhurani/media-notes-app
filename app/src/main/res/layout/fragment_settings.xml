@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="?attr/colorSurface">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,7 +18,7 @@
             android:text="Settings"
             android:textSize="26sp"
             android:textStyle="bold"
-            android:textColor="#1A237E"
+            android:textColor="?attr/colorOnSurface"
             android:layout_marginBottom="16dp"/>
 
         <!-- ACCOUNT -->
@@ -54,9 +54,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Logout"
-                    android:textColor="#D32F2F"
+                    android:textColor="?attr/colorOnSurface"
                     app:icon="@android:drawable/ic_lock_power_off"
-                    app:iconTint="#D32F2F"
+                    app:iconTint="?attr/colorOnSurface"
                     style="@style/Widget.MaterialComponents.Button.TextButton"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -116,7 +116,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Clear All Notes"
-                    android:textColor="#D32F2F"
+                    android:textColor="?attr/colorOnSurface"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExportData"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Export Notes Report"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -127,7 +135,7 @@
             android:layout_height="wrap_content"
             android:text="Version 1.0 • MediaNotes"
             android:gravity="center"
-            android:textColor="#888"
+            android:textColor="?attr/colorOnSurface"
             android:layout_marginTop="12dp"/>
 
     </LinearLayout>

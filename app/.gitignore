@@ -8,3 +8,4 @@
 *.log
 *.apk
 *.keystore
+google-services.json

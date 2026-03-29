@@ -4,13 +4,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_soft"
+    android:background="?attr/colorSurface"
     tools:context=".DashboardActivity">
 
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="?attr/colorSurface"
         android:layout_marginBottom="80dp" />
 
     <com.google.android.material.bottomappbar.BottomAppBar
@@ -18,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:backgroundTint="@color/surface_white"
+        android:backgroundTint="?attr/colorSurface"
         app:fabAlignmentMode="center"
         app:fabCradleMargin="10dp"
         app:fabCradleRoundedCornerRadius="10dp"
@@ -29,11 +30,11 @@
             android:id="@+id/bottomNavigationView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
             android:background="@android:color/transparent"
             app:elevation="0dp"
-            app:itemIconTint="@color/nav_item_color_selector"
-            app:itemTextColor="@color/nav_item_color_selector"
+            app:backgroundTint="?attr/colorSurface"
+            app:itemIconTint="?attr/colorOnSurface"
+            app:itemTextColor="?attr/colorOnSurface"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_bottom_nav" />
 
@@ -45,9 +46,9 @@
         android:layout_height="wrap_content"
         android:contentDescription="Add Note"
         android:src="@drawable/ic_add"
-        app:backgroundTint="@color/purple_500"
+        app:backgroundTint="?attr/colorPrimary"
         app:layout_anchor="@id/bottomAppBar"
         app:maxImageSize="32dp"
-        app:tint="@color/white" />
+        app:tint="?attr/colorOnPrimary" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
