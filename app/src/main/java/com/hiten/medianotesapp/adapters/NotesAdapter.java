@@ -1,8 +1,6 @@
 package com.hiten.medianotesapp.adapters;
 
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,21 +10,18 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
 import com.hiten.medianotesapp.NoteDetailActivity;
 import com.hiten.medianotesapp.R;
-import com.hiten.medianotesapp.database.DBHelper;
 import com.hiten.medianotesapp.model.Note;
-import java.io.File;
 import java.util.List;
 
 public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHolder> {
 
     private List<Note> noteList;
-    private DBHelper dbHelper;
 
-    public NotesAdapter(List<Note> noteList, DBHelper dbHelper) {
+    public NotesAdapter(List<Note> noteList) {
         this.noteList = noteList;
-        this.dbHelper = dbHelper;
     }
 
     public void updateList(List<Note> newList) {
@@ -46,23 +41,19 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
         Note note = noteList.get(position);
         holder.tvTitle.setText(note.getTitle());
         holder.tvDescription.setText(note.getDescription());
-        holder.tvDate.setText(note.getDate());
+        holder.tvDate.setText(note.getDateFormatted());
         
         setupCategoryChip(holder.tvNoteType, note.getNoteType());
 
-        if (note.getImagePath() != null && !note.getImagePath().isEmpty()) {
-            File imgFile = new File(note.getImagePath());
-            if (imgFile.exists()) {
-                Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
-                holder.ivThumbnail.setImageBitmap(myBitmap);
-            } else {
-                holder.ivThumbnail.setImageResource(android.R.drawable.ic_menu_gallery);
-            }
+        if (note.getImageUrl() != null && !note.getImageUrl().isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                .load(note.getImageUrl())
+                .placeholder(android.R.drawable.ic_menu_gallery)
+                .into(holder.ivThumbnail);
         } else {
             holder.ivThumbnail.setImageResource(android.R.drawable.ic_menu_gallery);
         }
 
-        // Fix: Show star ONLY if favorite. Remove auto-toggle.
         if (note.getIsFavorite() == 1) {
             holder.ivFavorite.setVisibility(View.VISIBLE);
             holder.ivFavorite.setImageResource(android.R.drawable.btn_star_big_on);
@@ -70,16 +61,9 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
             holder.ivFavorite.setVisibility(View.GONE);
         }
 
-        // Open Detail Screen
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), NoteDetailActivity.class);
             intent.putExtra("id", note.getId());
-            intent.putExtra("title", note.getTitle());
-            intent.putExtra("description", note.getDescription());
-            intent.putExtra("image_path", note.getImagePath());
-            intent.putExtra("note_type", note.getNoteType());
-            intent.putExtra("date", note.getDate());
-            intent.putExtra("is_favorite", note.getIsFavorite());
             v.getContext().startActivity(intent);
         });
     }

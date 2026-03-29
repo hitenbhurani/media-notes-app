@@ -1,9 +1,16 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.MediaNotesApp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/primary_deep</item>
+        <item name="android:windowBackground">@color/background_soft</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
     </style>
 
     <style name="Theme.MediaNotesApp" parent="Base.Theme.MediaNotesApp" />
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="postSplashScreenTheme">@style/Theme.MediaNotesApp</item>
+    </style>
 </resources>

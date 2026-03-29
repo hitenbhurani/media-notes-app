@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.hiten.medianotesapp" />
+                  <option name="mobileSdkAppId" value="1:537308465555:android:60a49dfd6636274460c066" />
+                  <option name="projectId" value="noteflow-6f662" />
+                  <option name="projectNumber" value="537308465555" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

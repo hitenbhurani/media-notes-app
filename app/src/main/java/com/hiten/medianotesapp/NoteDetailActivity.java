@@ -1,11 +1,7 @@
 package com.hiten.medianotesapp;
 
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -14,43 +10,45 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.snackbar.Snackbar;
-import com.hiten.medianotesapp.database.DBHelper;
+import com.google.firebase.auth.FirebaseAuth;
+import com.hiten.medianotesapp.database.NoteRepository;
 import com.hiten.medianotesapp.model.Note;
-
-import java.io.File;
 
 public class NoteDetailActivity extends AppCompatActivity {
 
-    private ImageView ivDetailImage;
-    private TextView tvDetailTitle, tvDetailDescription, tvDetailDate, tvDetailType;
+    private ImageView ivImage;
+    private TextView tvTitle, tvDesc, tvDate, tvType;
     private MaterialButton btnEdit, btnDelete, btnShare;
-    private DBHelper dbHelper;
 
-    private int noteId;
-    private String title, description, imagePath, date, noteType;
-    private int isFavorite;
+    private FirebaseAuth auth;
+    private NoteRepository noteRepository;
+
+    private String noteId;
+    private Note currentNote;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_note_detail);
 
-        dbHelper = new DBHelper(this);
+        auth = FirebaseAuth.getInstance();
+        noteRepository = NoteRepository.getInstance(this);
+
         initUI();
-        getIntentData();
+        getNoteIdFromIntent();
         setupActions();
     }
 
     private void initUI() {
-        ivDetailImage = findViewById(R.id.ivDetailImage);
-        tvDetailTitle = findViewById(R.id.tvDetailTitle);
-        tvDetailDescription = findViewById(R.id.tvDetailDescription);
-        tvDetailDate = findViewById(R.id.tvDetailDate);
-        tvDetailType = findViewById(R.id.tvDetailType);
+        ivImage = findViewById(R.id.ivDetailImage);
+        tvTitle = findViewById(R.id.tvDetailTitle);
+        tvDesc = findViewById(R.id.tvDetailDescription);
+        tvDate = findViewById(R.id.tvDetailDate);
+        tvType = findViewById(R.id.tvDetailType);
+
         btnEdit = findViewById(R.id.btnEdit);
         btnDelete = findViewById(R.id.btnDelete);
         btnShare = findViewById(R.id.btnShare);
@@ -59,92 +57,114 @@ public class NoteDetailActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("");
         }
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        toolbar.setNavigationOnClickListener(v -> finish());
     }
 
-    private void getIntentData() {
-        Intent intent = getIntent();
-        if (intent != null) {
-            noteId = intent.getIntExtra("id", -1);
-            title = intent.getStringExtra("title");
-            description = intent.getStringExtra("description");
-            imagePath = intent.getStringExtra("image_path");
-            date = intent.getStringExtra("date");
-            noteType = intent.getStringExtra("note_type");
-            isFavorite = intent.getIntExtra("is_favorite", 0);
+    private void getNoteIdFromIntent() {
+        noteId = getIntent().getStringExtra("id");
+        if (noteId == null) {
+            Toast.makeText(this, "Error: Note ID not found", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    }
 
-            // NULL SAFETY
-            if (title == null) title = "";
-            if (description == null) description = "";
-            if (noteType == null) noteType = "General";
-            if (date == null) date = "";
+    @Override
+    protected void onStart() {
+        super.onStart();
+        loadNote();
+    }
 
-            tvDetailTitle.setText(title);
-            tvDetailDescription.setText(description);
-            tvDetailDate.setText(date);
-            tvDetailType.setText(noteType);
+    private void loadNote() {
+        if (auth.getCurrentUser() == null || noteId == null) {
+            finish();
+            return;
+        }
 
-            // IMAGE CRASH FIX
-            if (imagePath != null && !imagePath.isEmpty()) {
-                File imgFile = new File(imagePath);
-                if (imgFile.exists()) {
-                    try {
-                        Bitmap bitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
-                        if (bitmap != null) {
-                            ivDetailImage.setImageBitmap(bitmap);
-                        } else {
-                            ivDetailImage.setImageResource(android.R.drawable.ic_menu_gallery);
-                        }
-                    } catch (Exception e) {
-                        ivDetailImage.setImageResource(android.R.drawable.ic_menu_gallery);
-                    }
-                } else {
-                    ivDetailImage.setImageResource(android.R.drawable.ic_menu_gallery);
+        noteRepository.getNoteById(noteId, auth.getCurrentUser().getUid(), new NoteRepository.DataCallback<Note>() {
+            @Override
+            public void onSuccess(Note data) {
+                if (data == null) {
+                    finish();
+                    return;
                 }
-            } else {
-                ivDetailImage.setImageResource(android.R.drawable.ic_menu_gallery);
+                currentNote = data;
+                updateUI();
             }
+
+            @Override
+            public void onError(Exception e) {
+                Toast.makeText(NoteDetailActivity.this, "Failed to load note", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
+    }
+
+    private void updateUI() {
+        tvTitle.setText(currentNote.getTitle());
+        tvDesc.setText(currentNote.getDescription());
+        tvType.setText(currentNote.getNoteType());
+        tvDate.setText(currentNote.getDateFormatted());
+
+        if (currentNote.getImagePath() != null && !currentNote.getImagePath().isEmpty()) {
+            Glide.with(this).load(currentNote.getImagePath()).into(ivImage);
+        } else {
+            ivImage.setImageResource(android.R.drawable.ic_menu_gallery);
         }
     }
 
     private void setupActions() {
-        btnDelete.setOnClickListener(v -> showDeleteDialog());
-        btnShare.setOnClickListener(v -> shareNote());
+        btnDelete.setOnClickListener(v -> confirmDelete());
+
+        btnShare.setOnClickListener(v -> {
+            if (currentNote == null) return;
+            String text = "Title: " + currentNote.getTitle() + "\n\n" + currentNote.getDescription();
+            Intent i = new Intent(Intent.ACTION_SEND);
+            i.setType("text/plain");
+            i.putExtra(Intent.EXTRA_TEXT, text);
+            startActivity(Intent.createChooser(i, "Share Note"));
+        });
+
         btnEdit.setOnClickListener(v -> {
-            // Fix: Open MainActivity in Edit Mode
-            Intent intent = new Intent(NoteDetailActivity.this, MainActivity.class);
-            intent.putExtra("id", noteId);
-            intent.putExtra("title", title);
-            intent.putExtra("description", description);
-            intent.putExtra("image_path", imagePath);
-            intent.putExtra("note_type", noteType);
-            intent.putExtra("is_edit", true);
-            startActivity(intent);
+            if (currentNote == null) return;
+            Intent i = new Intent(this, MainActivity.class);
+            i.putExtra("id", currentNote.getId());
+            i.putExtra("title", currentNote.getTitle());
+            i.putExtra("description", currentNote.getDescription());
+            i.putExtra("image_url", currentNote.getImagePath());
+            i.putExtra("note_type", currentNote.getNoteType());
+            i.putExtra("is_favorite", currentNote.getIsFavorite());
+            i.putExtra("is_edit", true);
+            startActivity(i);
         });
     }
 
-    private void showDeleteDialog() {
+    private void confirmDelete() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Note")
                 .setMessage("Are you sure you want to delete this note?")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    dbHelper.deleteNote(noteId);
-                    Toast.makeText(NoteDetailActivity.this, "Note deleted", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
+                .setPositiveButton("Delete", (d, w) -> deleteNote())
                 .setNegativeButton("Cancel", null)
-                .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
     }
 
-    private void shareNote() {
-        String shareBody = "Title: " + title + "\n\n" + description;
-        Intent sharingIntent = new Intent(Intent.ACTION_SEND);
-        sharingIntent.setType("text/plain");
-        sharingIntent.putExtra(Intent.EXTRA_SUBJECT, title);
-        sharingIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
-        startActivity(Intent.createChooser(sharingIntent, "Share note via"));
+    private void deleteNote() {
+        if (currentNote == null) return;
+
+        btnDelete.setEnabled(false);
+
+        noteRepository.deleteNote(currentNote, new NoteRepository.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(NoteDetailActivity.this, "Note deleted", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+
+            @Override
+            public void onError(Exception e) {
+                btnDelete.setEnabled(true);
+                Toast.makeText(NoteDetailActivity.this, "Delete failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "537308465555",
+    "project_id": "noteflow-6f662",
+    "storage_bucket": "noteflow-6f662.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537308465555:android:60a49dfd6636274460c066",
+        "android_client_info": {
+          "package_name": "com.hiten.medianotesapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "537308465555-0vb0uvdgstq5ktnhj15au75e6fiaemti.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hiten.medianotesapp",
+            "certificate_hash": "8ad5d8eb9420656e6cf8433e1da073e39af83ec4"
+          }
+        },
+        {
+          "client_id": "537308465555-vlj2o6nj4123q5celqslakfq2n7ksn5n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdSgrGGjWHPvGG1d_7prHLrmSscnh28qo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "537308465555-vlj2o6nj4123q5celqslakfq2n7ksn5n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

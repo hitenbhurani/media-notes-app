@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -36,8 +37,20 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
-    implementation(libs.work.runtime)
     implementation(libs.swiperefreshlayout)
+    implementation(libs.androidx.core.splashscreen)
+    
+    // Firebase BoM and SDKs
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    
+    // Google Sign-In
+    implementation(libs.play.services.auth)
+    
+    // Image Loading
+    implementation(libs.glide)
+    annotationProcessor(libs.glide)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

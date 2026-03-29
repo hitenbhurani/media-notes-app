@@ -5,23 +5,28 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+
 import com.hiten.medianotesapp.model.Note;
+
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class DBHelper extends SQLiteOpenHelper {
 
-    private static final String DATABASE_NAME = "NotesDB_8";
-    private static final int DATABASE_VERSION = 2;
-    private static final String TABLE_NAME = "notes_8";
+    private static final String DATABASE_NAME = "notes_local.db";
+    private static final int DATABASE_VERSION = 3;
+    private static final String TABLE_NOTES = "notes";
 
     private static final String COLUMN_ID = "id";
     private static final String COLUMN_TITLE = "title";
     private static final String COLUMN_DESCRIPTION = "description";
     private static final String COLUMN_IMAGE_PATH = "image_path";
-    private static final String COLUMN_DATE = "date";
     private static final String COLUMN_NOTE_TYPE = "note_type";
+    private static final String COLUMN_USER_ID = "user_id";
+    private static final String COLUMN_TIMESTAMP = "timestamp";
     private static final String COLUMN_IS_FAVORITE = "is_favorite";
+    private static final String COLUMN_IS_DONE = "is_done";
 
     public DBHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -29,101 +34,149 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + "("
+        String create = "CREATE TABLE IF NOT EXISTS " + TABLE_NOTES + " ("
                 + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + COLUMN_TITLE + " TEXT,"
+                + COLUMN_TITLE + " TEXT NOT NULL,"
                 + COLUMN_DESCRIPTION + " TEXT,"
-                + COLUMN_IMAGE_PATH + " TEXT,"
-                + COLUMN_DATE + " TEXT,"
                 + COLUMN_NOTE_TYPE + " TEXT,"
-                + COLUMN_IS_FAVORITE + " INTEGER DEFAULT 0" + ")";
-        db.execSQL(CREATE_TABLE);
+                + COLUMN_IMAGE_PATH + " TEXT,"
+                + COLUMN_USER_ID + " TEXT NOT NULL,"
+                + COLUMN_TIMESTAMP + " INTEGER,"
+                + COLUMN_IS_FAVORITE + " INTEGER DEFAULT 0,"
+                + COLUMN_IS_DONE + " INTEGER DEFAULT 0"
+                + ")";
+        db.execSQL(create);
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_notes_user_ts ON " + TABLE_NOTES + "(" + COLUMN_USER_ID + "," + COLUMN_TIMESTAMP + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion < 2) {
-            db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN " + COLUMN_IS_FAVORITE + " INTEGER DEFAULT 0");
+        if (oldVersion < 3) {
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_NOTES);
+            onCreate(db);
         }
     }
 
     public long insertNote(Note note) {
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_TITLE, note.getTitle());
         values.put(COLUMN_DESCRIPTION, note.getDescription());
         values.put(COLUMN_IMAGE_PATH, note.getImagePath());
-        values.put(COLUMN_DATE, note.getDate());
         values.put(COLUMN_NOTE_TYPE, note.getNoteType());
-        // Fix: Insert the actual favorite status from the Note object
+        values.put(COLUMN_USER_ID, note.getUserId());
+        values.put(COLUMN_TIMESTAMP, note.getTimestamp() != null ? note.getTimestamp().getTime() : System.currentTimeMillis());
         values.put(COLUMN_IS_FAVORITE, note.getIsFavorite());
-
-        long id = db.insert(TABLE_NAME, null, values);
-        db.close();
-        return id;
+        values.put(COLUMN_IS_DONE, note.getIsDone());
+        return db.insert(TABLE_NOTES, null, values);
     }
 
-    public void updateNote(int id, String title, String description, String imagePath, String noteType, int isFavorite) {
-        SQLiteDatabase db = this.getWritableDatabase();
+    public int updateNote(Note note) {
+        SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
-        values.put(COLUMN_TITLE, title);
-        values.put(COLUMN_DESCRIPTION, description);
-        values.put(COLUMN_IMAGE_PATH, imagePath);
-        values.put(COLUMN_NOTE_TYPE, noteType);
-        values.put(COLUMN_IS_FAVORITE, isFavorite);
-        db.update(TABLE_NAME, values, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
-        db.close();
+        values.put(COLUMN_TITLE, note.getTitle());
+        values.put(COLUMN_DESCRIPTION, note.getDescription());
+        values.put(COLUMN_IMAGE_PATH, note.getImagePath());
+        values.put(COLUMN_NOTE_TYPE, note.getNoteType());
+        values.put(COLUMN_USER_ID, note.getUserId());
+        values.put(COLUMN_TIMESTAMP, note.getTimestamp() != null ? note.getTimestamp().getTime() : System.currentTimeMillis());
+        values.put(COLUMN_IS_FAVORITE, note.getIsFavorite());
+        values.put(COLUMN_IS_DONE, note.getIsDone());
+        return db.update(TABLE_NOTES, values, COLUMN_ID + "=?", new String[]{note.getId()});
     }
 
-    public void updateFavoriteStatus(int id, int isFavorite) {
-        SQLiteDatabase db = this.getWritableDatabase();
+    public int deleteNote(Note note) {
+        if (note == null || note.getId() == null) return 0;
+        SQLiteDatabase db = getWritableDatabase();
+        return db.delete(TABLE_NOTES, COLUMN_ID + "=?", new String[]{note.getId()});
+    }
+
+    public int deleteAllNotes(String userId) {
+        SQLiteDatabase db = getWritableDatabase();
+        return db.delete(TABLE_NOTES, COLUMN_USER_ID + "=?", new String[]{userId});
+    }
+
+    public int updateDoneStatus(String noteId, int isDone) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_IS_DONE, isDone);
+        return db.update(TABLE_NOTES, values, COLUMN_ID + "=?", new String[]{noteId});
+    }
+
+    public int updateFavoriteStatus(String noteId, int isFavorite) {
+        SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_IS_FAVORITE, isFavorite);
-        db.update(TABLE_NAME, values, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
-        db.close();
+        return db.update(TABLE_NOTES, values, COLUMN_ID + "=?", new String[]{noteId});
     }
 
-    public void deleteNote(int id) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(TABLE_NAME, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
-        db.close();
+    public Note getNoteById(String noteId, String userId) {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_ID + "=? AND " + COLUMN_USER_ID + "=? LIMIT 1",
+                new String[]{noteId, userId}
+        );
+        try {
+            if (cursor.moveToFirst()) {
+                return mapNote(cursor);
+            }
+            return null;
+        } finally {
+            cursor.close();
+        }
     }
 
-    public List<Note> getAllNotes() {
-        return getNotesByQuery("SELECT * FROM " + TABLE_NAME + " ORDER BY " + COLUMN_ID + " DESC", null);
+    public List<Note> getAllNotes(String userId) {
+        return getNotesByQuery(
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? ORDER BY " + COLUMN_TIMESTAMP + " DESC",
+                new String[]{userId}
+        );
     }
 
-    public List<Note> searchNotes(String query) {
-        String selectQuery = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_TITLE + " LIKE ? OR " + COLUMN_DESCRIPTION + " LIKE ? ORDER BY " + COLUMN_ID + " DESC";
-        return getNotesByQuery(selectQuery, new String[]{"%" + query + "%", "%" + query + "%"});
+    public List<Note> getFavoriteNotes(String userId) {
+        return getNotesByQuery(
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? AND " + COLUMN_IS_FAVORITE + "=1 ORDER BY " + COLUMN_TIMESTAMP + " DESC",
+                new String[]{userId}
+        );
     }
 
-    public List<Note> filterNotes(String type) {
-        if (type.equalsIgnoreCase("All")) return getAllNotes();
-        String selectQuery = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_NOTE_TYPE + "=? ORDER BY " + COLUMN_ID + " DESC";
-        return getNotesByQuery(selectQuery, new String[]{type});
+    public List<Note> getNotesByDate(String userId, long startMillis, long endMillis) {
+        return getNotesByQuery(
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? AND " + COLUMN_TIMESTAMP + ">=? AND " + COLUMN_TIMESTAMP + "<=? ORDER BY " + COLUMN_TIMESTAMP + " DESC",
+                new String[]{userId, String.valueOf(startMillis), String.valueOf(endMillis)}
+        );
     }
 
     private List<Note> getNotesByQuery(String query, String[] args) {
         List<Note> notes = new ArrayList<>();
-        SQLiteDatabase db = this.getReadableDatabase();
+        SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, args);
-
-        if (cursor.moveToFirst()) {
-            do {
-                Note note = new Note();
-                note.setId(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID)));
-                note.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE)));
-                note.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)));
-                note.setImagePath(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_IMAGE_PATH)));
-                note.setDate(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DATE)));
-                note.setNoteType(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTE_TYPE)));
-                note.setIsFavorite(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_FAVORITE)));
-                notes.add(note);
-            } while (cursor.moveToNext());
+        try {
+            if (cursor.moveToFirst()) {
+                do {
+                    notes.add(mapNote(cursor));
+                } while (cursor.moveToNext());
+            }
+        } finally {
+            cursor.close();
         }
-        cursor.close();
-        db.close();
         return notes;
+    }
+
+    private Note mapNote(Cursor cursor) {
+        Note note = new Note();
+        note.setId(String.valueOf(cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))));
+        note.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE)));
+        note.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)));
+        note.setImagePath(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_IMAGE_PATH)));
+        note.setNoteType(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTE_TYPE)));
+        note.setUserId(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)));
+
+        long ts = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP));
+        note.setTimestamp(ts > 0 ? new Date(ts) : new Date());
+
+        note.setIsFavorite(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_FAVORITE)));
+        note.setIsDone(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_DONE)));
+        return note;
     }
 }
