@@ -58,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private String photoPath = "";
     private boolean isEditMode = false;
     private String noteIdToEdit = "";
+    private int existingDoneStatus = 0;
+    private long existingTimestampMillis = -1L;
 
     private static final int REQUEST_CAMERA = 101;
     private static final int REQUEST_GALLERY = 102;
@@ -88,7 +90,16 @@ public class MainActivity extends AppCompatActivity {
             checkPermissionAndOpenSource();
         });
         btnSave.setOnClickListener(v -> validateAndSave());
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (isEditMode) {
+                finish();
+            } else {
+                Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+                finish();
+            }
+        });
     }
 
     private void checkPermissionAndOpenSource() {
@@ -136,8 +147,6 @@ public class MainActivity extends AppCompatActivity {
         btnSave = findViewById(R.id.btnSave);
         btnBack = findViewById(R.id.btnViewAll);
         progressBar = findViewById(R.id.progressBar);
-
-        btnBack.setText("Cancel");
     }
 
     private void setupCategoryLogic() {
@@ -156,6 +165,8 @@ public class MainActivity extends AppCompatActivity {
         if (intent != null && intent.getBooleanExtra("is_edit", false)) {
             isEditMode = true;
             noteIdToEdit = intent.getStringExtra("id");
+            existingDoneStatus = intent.getIntExtra("is_done", 0);
+            existingTimestampMillis = intent.getLongExtra("timestamp", -1L);
 
             etTitle.setText(intent.getStringExtra("title"));
             etDescription.setText(intent.getStringExtra("description"));
@@ -171,6 +182,9 @@ public class MainActivity extends AppCompatActivity {
 
             switchFavorite.setChecked(intent.getIntExtra("is_favorite", 0) == 1);
             btnSave.setText("Update Note");
+            btnBack.setText("Cancel");
+        } else {
+            btnBack.setText("View Notes");
         }
     }
 
@@ -276,10 +290,11 @@ public class MainActivity extends AppCompatActivity {
         String userId = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "guest";
         Note note = new Note(title, desc, imagePath, category, userId);
         note.setIsFavorite(switchFavorite.isChecked() ? 1 : 0);
-        note.setTimestamp(new Date());
 
         if (isEditMode) {
             note.setId(noteIdToEdit);
+            note.setIsDone(existingDoneStatus);
+            note.setTimestamp(existingTimestampMillis > 0L ? new Date(existingTimestampMillis) : new Date());
             noteRepository.updateNote(note, new NoteRepository.SimpleCallback() {
                 @Override
                 public void onSuccess() {
@@ -294,6 +309,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         } else {
+            note.setTimestamp(new Date());
             noteRepository.insertNote(note, new NoteRepository.DataCallback<Long>() {
                 @Override
                 public void onSuccess(Long data) {

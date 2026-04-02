@@ -14,9 +14,9 @@ import java.util.List;
 
 public class DBHelper extends SQLiteOpenHelper {
 
-    private static final String DATABASE_NAME = "notes_local.db";
-    private static final int DATABASE_VERSION = 3;
-    private static final String TABLE_NOTES = "notes";
+    private static final String DATABASE_NAME = "NotesDB_8";
+    private static final int DATABASE_VERSION = 4;
+    private static final String TABLE_NOTES = "notes_8";
 
     private static final String COLUMN_ID = "id";
     private static final String COLUMN_TITLE = "title";
@@ -24,7 +24,7 @@ public class DBHelper extends SQLiteOpenHelper {
     private static final String COLUMN_IMAGE_PATH = "image_path";
     private static final String COLUMN_NOTE_TYPE = "note_type";
     private static final String COLUMN_USER_ID = "user_id";
-    private static final String COLUMN_TIMESTAMP = "timestamp";
+    private static final String COLUMN_DATE = "date";
     private static final String COLUMN_IS_FAVORITE = "is_favorite";
     private static final String COLUMN_IS_DONE = "is_done";
 
@@ -41,17 +41,17 @@ public class DBHelper extends SQLiteOpenHelper {
                 + COLUMN_NOTE_TYPE + " TEXT,"
                 + COLUMN_IMAGE_PATH + " TEXT,"
                 + COLUMN_USER_ID + " TEXT NOT NULL,"
-                + COLUMN_TIMESTAMP + " INTEGER,"
+                + COLUMN_DATE + " INTEGER,"
                 + COLUMN_IS_FAVORITE + " INTEGER DEFAULT 0,"
                 + COLUMN_IS_DONE + " INTEGER DEFAULT 0"
                 + ")";
         db.execSQL(create);
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_notes_user_ts ON " + TABLE_NOTES + "(" + COLUMN_USER_ID + "," + COLUMN_TIMESTAMP + ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_notes_user_date ON " + TABLE_NOTES + "(" + COLUMN_USER_ID + "," + COLUMN_DATE + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion < 3) {
+        if (oldVersion < 4) {
             db.execSQL("DROP TABLE IF EXISTS " + TABLE_NOTES);
             onCreate(db);
         }
@@ -65,7 +65,7 @@ public class DBHelper extends SQLiteOpenHelper {
         values.put(COLUMN_IMAGE_PATH, note.getImagePath());
         values.put(COLUMN_NOTE_TYPE, note.getNoteType());
         values.put(COLUMN_USER_ID, note.getUserId());
-        values.put(COLUMN_TIMESTAMP, note.getTimestamp() != null ? note.getTimestamp().getTime() : System.currentTimeMillis());
+        values.put(COLUMN_DATE, note.getTimestamp() != null ? note.getTimestamp().getTime() : System.currentTimeMillis());
         values.put(COLUMN_IS_FAVORITE, note.getIsFavorite());
         values.put(COLUMN_IS_DONE, note.getIsDone());
         return db.insert(TABLE_NOTES, null, values);
@@ -79,7 +79,7 @@ public class DBHelper extends SQLiteOpenHelper {
         values.put(COLUMN_IMAGE_PATH, note.getImagePath());
         values.put(COLUMN_NOTE_TYPE, note.getNoteType());
         values.put(COLUMN_USER_ID, note.getUserId());
-        values.put(COLUMN_TIMESTAMP, note.getTimestamp() != null ? note.getTimestamp().getTime() : System.currentTimeMillis());
+        values.put(COLUMN_DATE, note.getTimestamp() != null ? note.getTimestamp().getTime() : System.currentTimeMillis());
         values.put(COLUMN_IS_FAVORITE, note.getIsFavorite());
         values.put(COLUMN_IS_DONE, note.getIsDone());
         return db.update(TABLE_NOTES, values, COLUMN_ID + "=?", new String[]{note.getId()});
@@ -128,23 +128,56 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public List<Note> getAllNotes(String userId) {
         return getNotesByQuery(
-                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? ORDER BY " + COLUMN_TIMESTAMP + " DESC",
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? ORDER BY " + COLUMN_DATE + " DESC",
                 new String[]{userId}
         );
     }
 
     public List<Note> getFavoriteNotes(String userId) {
         return getNotesByQuery(
-                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? AND " + COLUMN_IS_FAVORITE + "=1 ORDER BY " + COLUMN_TIMESTAMP + " DESC",
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? AND " + COLUMN_IS_FAVORITE + "=1 ORDER BY " + COLUMN_DATE + " DESC",
                 new String[]{userId}
         );
     }
 
     public List<Note> getNotesByDate(String userId, long startMillis, long endMillis) {
         return getNotesByQuery(
-                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? AND " + COLUMN_TIMESTAMP + ">=? AND " + COLUMN_TIMESTAMP + "<=? ORDER BY " + COLUMN_TIMESTAMP + " DESC",
+                "SELECT * FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=? AND " + COLUMN_DATE + ">=? AND " + COLUMN_DATE + "<=? ORDER BY " + COLUMN_DATE + " DESC",
                 new String[]{userId, String.valueOf(startMillis), String.valueOf(endMillis)}
         );
+    }
+
+    public int countAllNotes() {
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_NOTES, null);
+        try {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0);
+            }
+            return 0;
+        } finally {
+            cursor.close();
+        }
+    }
+
+    public int countNotesForUser(String userId) {
+        if (userId == null) {
+            return 0;
+        }
+
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM " + TABLE_NOTES + " WHERE " + COLUMN_USER_ID + "=?",
+                new String[]{userId}
+        );
+        try {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0);
+            }
+            return 0;
+        } finally {
+            cursor.close();
+        }
     }
 
     private List<Note> getNotesByQuery(String query, String[] args) {
@@ -172,7 +205,7 @@ public class DBHelper extends SQLiteOpenHelper {
         note.setNoteType(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTE_TYPE)));
         note.setUserId(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USER_ID)));
 
-        long ts = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP));
+        long ts = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_DATE));
         note.setTimestamp(ts > 0 ? new Date(ts) : new Date());
 
         note.setIsFavorite(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_FAVORITE)));

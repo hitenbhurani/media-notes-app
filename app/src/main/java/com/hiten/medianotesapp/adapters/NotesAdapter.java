@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide;
 import com.hiten.medianotesapp.NoteDetailActivity;
 import com.hiten.medianotesapp.R;
 import com.hiten.medianotesapp.model.Note;
+import java.util.Collections;
 import java.util.List;
 
 public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHolder> {
@@ -21,11 +22,11 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
     private List<Note> noteList;
 
     public NotesAdapter(List<Note> noteList) {
-        this.noteList = noteList;
+        this.noteList = noteList != null ? noteList : Collections.emptyList();
     }
 
     public void updateList(List<Note> newList) {
-        this.noteList = newList;
+        this.noteList = newList != null ? newList : Collections.emptyList();
         notifyDataSetChanged();
     }
 
@@ -39,6 +40,17 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
     @Override
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
         Note note = noteList.get(position);
+        if (note == null) {
+            holder.tvTitle.setText("Untitled note");
+            holder.tvDescription.setText("No description");
+            holder.tvDate.setText("Just now");
+            setupCategoryChip(holder.tvNoteType, "General");
+            holder.ivThumbnail.setImageResource(android.R.drawable.ic_menu_gallery);
+            holder.ivFavorite.setVisibility(View.GONE);
+            holder.itemView.setOnClickListener(null);
+            return;
+        }
+
         holder.tvTitle.setText(note.getTitle());
         holder.tvDescription.setText(note.getDescription());
         holder.tvDate.setText(note.getDateFormatted());
@@ -105,7 +117,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteViewHold
 
     @Override
     public int getItemCount() {
-        return noteList.size();
+        return noteList == null ? 0 : noteList.size();
     }
 
     public static class NoteViewHolder extends RecyclerView.ViewHolder {

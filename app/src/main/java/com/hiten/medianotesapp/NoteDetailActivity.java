@@ -2,6 +2,7 @@ package com.hiten.medianotesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -101,9 +102,9 @@ public class NoteDetailActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
-        tvTitle.setText(currentNote.getTitle());
-        tvDesc.setText(currentNote.getDescription());
-        tvType.setText(currentNote.getNoteType());
+        tvTitle.setText(TextUtils.isEmpty(currentNote.getTitle()) ? "Untitled note" : currentNote.getTitle());
+        tvDesc.setText(TextUtils.isEmpty(currentNote.getDescription()) ? "No description" : currentNote.getDescription());
+        tvType.setText(TextUtils.isEmpty(currentNote.getNoteType()) ? "General" : currentNote.getNoteType());
         tvDate.setText(currentNote.getDateFormatted());
 
         if (currentNote.getImagePath() != null && !currentNote.getImagePath().isEmpty()) {
@@ -134,6 +135,8 @@ public class NoteDetailActivity extends AppCompatActivity {
             i.putExtra("image_url", currentNote.getImagePath());
             i.putExtra("note_type", currentNote.getNoteType());
             i.putExtra("is_favorite", currentNote.getIsFavorite());
+            i.putExtra("is_done", currentNote.getIsDone());
+            i.putExtra("timestamp", currentNote.getTimestamp() != null ? currentNote.getTimestamp().getTime() : -1L);
             i.putExtra("is_edit", true);
             startActivity(i);
         });

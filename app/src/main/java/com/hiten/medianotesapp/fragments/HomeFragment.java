@@ -1,10 +1,16 @@
 package com.hiten.medianotesapp.fragments;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,6 +33,9 @@ import java.util.List;
 
 public class HomeFragment extends Fragment {
 
+    private static final float SHAKE_THRESHOLD_G = 2.2f;
+    private static final long SHAKE_COOLDOWN_MS = 1200L;
+
     private RecyclerView rvNotes;
     private NotesAdapter adapter;
     private FirebaseAuth auth;
@@ -38,9 +47,37 @@ public class HomeFragment extends Fragment {
 
     private final List<Note> fullList = new ArrayList<>();
     private NoteRepository noteRepository;
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private long lastShakeMillis;
+    private boolean isClearingNotes;
 
     private String currentQuery = "";
     private String currentFilter = "All";
+
+    private final SensorEventListener shakeListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (event == null || event.sensor == null || event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) {
+                return;
+            }
+
+            float x = event.values[0] / SensorManager.GRAVITY_EARTH;
+            float y = event.values[1] / SensorManager.GRAVITY_EARTH;
+            float z = event.values[2] / SensorManager.GRAVITY_EARTH;
+            float gForce = (float) Math.sqrt(x * x + y * y + z * z);
+
+            long now = System.currentTimeMillis();
+            if (gForce > SHAKE_THRESHOLD_G && now - lastShakeMillis > SHAKE_COOLDOWN_MS) {
+                lastShakeMillis = now;
+                clearAllNotesFromShake();
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        }
+    };
 
     public HomeFragment() {}
 
@@ -51,6 +88,10 @@ public class HomeFragment extends Fragment {
 
         auth = FirebaseAuth.getInstance();
         noteRepository = NoteRepository.getInstance(requireContext());
+        sensorManager = (SensorManager) requireContext().getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
 
         rvNotes = view.findViewById(R.id.rvNotes);
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
@@ -134,15 +175,20 @@ public class HomeFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        loadNotes();
-    }
-
-    @Override
     public void onResume() {
         super.onResume();
         loadNotes();
+        if (sensorManager != null && accelerometer != null) {
+            sensorManager.registerListener(shakeListener, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(shakeListener);
+        }
     }
 
     private void applyFilters() {
@@ -174,6 +220,60 @@ public class HomeFragment extends Fragment {
         }
 
         updateUI(filtered);
+    }
+
+    private void clearAllNotesFromShake() {
+        if (!isAdded() || isClearingNotes) {
+            return;
+        }
+
+        if (auth.getCurrentUser() == null) {
+            Toast.makeText(requireContext(), "Please login again", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String userId = auth.getCurrentUser().getUid();
+        isClearingNotes = true;
+        if (swipeRefresh != null) {
+            swipeRefresh.setRefreshing(true);
+        }
+
+        noteRepository.deleteAllNotes(userId, new NoteRepository.DataCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer deletedCount) {
+                isClearingNotes = false;
+                if (swipeRefresh != null) {
+                    swipeRefresh.setRefreshing(false);
+                }
+
+                if (!isAdded()) {
+                    return;
+                }
+
+                fullList.clear();
+                applyFilters();
+
+                int count = deletedCount == null ? 0 : deletedCount;
+                if (count > 0) {
+                    Toast.makeText(requireContext(), "Device motion detected. " + count + " notes cleared", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(requireContext(), "Device motion detected. No notes to clear", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {
+                isClearingNotes = false;
+                if (swipeRefresh != null) {
+                    swipeRefresh.setRefreshing(false);
+                }
+
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(requireContext(), "Failed to clear notes", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void updateUI(List<Note> list) {

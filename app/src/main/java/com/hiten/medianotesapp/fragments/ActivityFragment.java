@@ -54,6 +54,7 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
 
     private RecyclerView rvActivity;
     private ActivityAdapter adapter;
+    private View scrollActivity;
     private View layoutOverview;
     private MaterialCardView cardChart;
     private MaterialCardView cardStreak;
@@ -77,7 +78,6 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
     private final Map<String, List<Note>> notesByDay = new HashMap<>();
     private final Set<String> markedDays = new HashSet<>();
     private String selectedDayKey = "";
-    private boolean loadedOnce;
 
     public ActivityFragment() {
     }
@@ -91,6 +91,7 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
         noteRepository = NoteRepository.getInstance(requireContext());
 
         rvActivity = view.findViewById(R.id.rvActivity);
+        scrollActivity = view.findViewById(R.id.scrollActivity);
         layoutOverview = view.findViewById(R.id.layoutOverview);
         cardChart = view.findViewById(R.id.cardChart);
         cardStreak = view.findViewById(R.id.cardStreak);
@@ -170,10 +171,17 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        if (!loadedOnce) {
-            loadedOnce = true;
+    public void onResume() {
+        super.onResume();
+        if (!isHidden()) {
+            loadNotes();
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && isResumed()) {
             loadNotes();
         }
     }
@@ -330,7 +338,7 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
         }
 
         List<String> keys = new ArrayList<>(dayKeys);
-        Collections.sort(keys);
+        Collections.sort(keys, Collections.reverseOrder());
         int max = Math.min(8, keys.size());
 
         StringBuilder sb = new StringBuilder("Active dates: ");
@@ -399,6 +407,7 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
         renderChart(state.chartLabels, state.chartCounts);
 
         int visibleSections = state.hasNotes ? View.VISIBLE : View.GONE;
+        scrollActivity.setVisibility(state.hasNotes ? View.VISIBLE : View.GONE);
         layoutOverview.setVisibility(visibleSections);
         cardChart.setVisibility(visibleSections);
         cardStreak.setVisibility(visibleSections);
@@ -504,7 +513,6 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
 
         int nextDone = note.getIsDone() == 1 ? 0 : 1;
         note.setIsDone(nextDone);
-        adapter.notifyDataSetChanged();
         rebuildAndRenderDashboard();
 
         noteRepository.updateDoneStatus(note.getId(), nextDone, new NoteRepository.SimpleCallback() {
@@ -515,7 +523,6 @@ public class ActivityFragment extends Fragment implements ActivityAdapter.OnNote
             @Override
             public void onError(Exception e) {
                 note.setIsDone(nextDone == 1 ? 0 : 1);
-                adapter.notifyDataSetChanged();
                 rebuildAndRenderDashboard();
                 if (isAdded()) {
                     Toast.makeText(requireContext(), "Failed to update task state", Toast.LENGTH_SHORT).show();
