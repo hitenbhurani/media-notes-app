@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">Media Notes App</string>
-    <!-- Replace with your actual Web Client ID from Firebase Console or Google Cloud Console -->
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE.apps.googleusercontent.com</string>
+    <string name="app_name">Media Notes App A2</string>
+    <string name="default_web_client_id">537308465555-vlj2o6nj4123q5celqslakfq2n7ksn5n.apps.googleusercontent.com</string>
 </resources>

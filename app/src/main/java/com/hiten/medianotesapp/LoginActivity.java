@@ -18,6 +18,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -46,9 +47,10 @@ public class LoginActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        // Configure Google Sign In using the client_id from google-services.json
+        // Configure Google Sign In using web client ID from resources.
+        String webClientId = getString(R.string.default_web_client_id);
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("537308465555-vlj2o6nj4123q5celqslakfq2n7ksn5n.apps.googleusercontent.com")
+            .requestIdToken(webClientId)
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
@@ -86,7 +88,7 @@ public class LoginActivity extends AppCompatActivity {
                             startActivity(new Intent(LoginActivity.this, DashboardActivity.class));
                             finish();
                         } else {
-                            Toast.makeText(LoginActivity.this, "Authentication failed: " + task.getException().getMessage(),
+                            Toast.makeText(LoginActivity.this, getAuthErrorMessage(task.getException()),
                                     Toast.LENGTH_SHORT).show();
                         }
                     });
@@ -127,7 +129,11 @@ public class LoginActivity extends AppCompatActivity {
                     firebaseAuthWithGoogle(account.getIdToken());
                 }
             } catch (ApiException e) {
-                Toast.makeText(this, "Google sign in failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (e.getStatusCode() == CommonStatusCodes.DEVELOPER_ERROR) {
+                    Toast.makeText(this, "Google Sign-In config mismatch (code 10). Check package name, SHA-1, and web client ID.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "Google sign in failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
@@ -142,8 +148,17 @@ public class LoginActivity extends AppCompatActivity {
                         startActivity(new Intent(LoginActivity.this, DashboardActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(LoginActivity.this, "Firebase auth with Google failed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, getAuthErrorMessage(task.getException()), Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private String getAuthErrorMessage(Exception e) {
+        String message = e != null && e.getMessage() != null ? e.getMessage() : "Unknown authentication error";
+        String lower = message.toLowerCase();
+        if (lower.contains("api key expired")) {
+            return "Authentication failed: API key expired. Update Firebase API key and google-services.json.";
+        }
+        return "Authentication failed: " + message;
     }
 }

@@ -71,8 +71,9 @@ public class SettingsFragment extends Fragment {
         prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
 
         // Configure Google Sign In to handle logout correctly
+        String webClientId = getString(R.string.default_web_client_id);
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("537308465555-vlj2o6nj4123q5celqslakfq2n7ksn5n.apps.googleusercontent.com")
+            .requestIdToken(webClientId)
                 .requestEmail()
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(requireActivity(), gso);

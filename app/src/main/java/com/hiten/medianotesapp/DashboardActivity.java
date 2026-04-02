@@ -5,14 +5,20 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
+import com.google.android.material.bottomappbar.BottomAppBar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.hiten.medianotesapp.fragments.ActivityFragment;
@@ -43,8 +49,12 @@ public class DashboardActivity extends AppCompatActivity {
         requestNotificationPermissionIfNeeded();
         ReminderWorkScheduler.schedulePeriodicReminder(getApplicationContext());
 
+        FrameLayout fragmentContainer = findViewById(R.id.fragment_container);
+        BottomAppBar bottomAppBar = findViewById(R.id.bottomAppBar);
         BottomNavigationView navView = findViewById(R.id.bottomNavigationView);
         FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
+
+        applyBottomBarSpacing(fragmentContainer, bottomAppBar);
 
         if (savedInstanceState == null) {
             homeFragment = new HomeFragment();
@@ -143,5 +153,35 @@ public class DashboardActivity extends AppCompatActivity {
         }
 
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    private void applyBottomBarSpacing(FrameLayout fragmentContainer, BottomAppBar bottomAppBar) {
+        if (fragmentContainer == null || bottomAppBar == null) {
+            return;
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(bottomAppBar, (view, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(view.getPaddingLeft(), view.getPaddingTop(), view.getPaddingRight(), systemBars.bottom);
+
+            view.post(() -> {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) fragmentContainer.getLayoutParams();
+                int desiredMargin = view.getHeight();
+                if (params.bottomMargin != desiredMargin) {
+                    params.bottomMargin = desiredMargin;
+                    fragmentContainer.setLayoutParams(params);
+                }
+            });
+            return insets;
+        });
+
+        bottomAppBar.post(() -> {
+            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) fragmentContainer.getLayoutParams();
+            int desiredMargin = bottomAppBar.getHeight();
+            if (params.bottomMargin != desiredMargin) {
+                params.bottomMargin = desiredMargin;
+                fragmentContainer.setLayoutParams(params);
+            }
+        });
     }
 }
